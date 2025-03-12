@@ -1,6 +1,6 @@
 streamlit
-pillow==10.0.1
-pandas==1.5.3
-numpy==1.26.4
-plotly==5.13.1
-openpyxl==3.1.2
+pillow
+pandas
+numpy
+plotly
+openpyxl
