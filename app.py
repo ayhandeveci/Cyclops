@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objs as go  # Graph Objects
+import os  # Dosya işlemleri için gerekli
 
 def format_float_for_turkish(value):
     """
