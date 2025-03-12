@@ -106,37 +106,70 @@ def main():
                 st.write("Nihai Kümülatif Üçgen (Orijinal + Tail):")
                 st.dataframe(format_df_for_turkish(final_cumulative))
             
-            with tab4:
- # 6) Grafik düzenlemeleri
-                fig.update_layout(
-                    title="Mutlak Ultimate Değer (Sadece ABS)",
-                    xaxis=dict(title="Development Period"),
-                    yaxis=dict(title="Absolute Ultimate"),
-                    showlegend=False,  # Lejandı tamamen kapatıyoruz
-                    hovermode="x unified"
-                )
-                fig.update_layout(
-                    yaxis=dict(
-                        side="right",       # Eksen sağda
-                        anchor="free",      # Serbest konum
-                        overlaying="free",  # Başka eksene bindirme yok
-                        position=1.0        # X ekseni üzerinde 1.0 konumunda (sağ kenar)
-                    )
-                )
-                fig.update_layout(
-                    hovermode="closest"
-                )
-
-
-                # Eğer bir yatay çizgi veya annotation eklemek istemiyorsanız, eklemeyin.
-                # (Sapma=0 çizgisi gibi unsurlar devre dışı bırakıldı.)
-
-                st.plotly_chart(fig, use_container_width=True)
+               with tab4:
+                    st.subheader("Ultimate Değer Grafiği (Sadece ABS)")
+                    # 1) Incremental verilerden her iterasyon için kümülatif değer
+                    df_group = iteration_data.groupby(["iteration", "dev"])["value"].sum().reset_index()
+                    df_group = df_group.sort_values(by=["iteration", "dev"])
+                    df_group["cum_value"] = df_group.groupby("iteration")["value"].cumsum()
                 
-                st.write("""
-                    Her çizgi, ilgili iterasyonun development period boyunca **mutlak ultimate** 
-                    (final ortalama + sapma) değerlerini göstermektedir. Lejand ve sapma çizgileri kaldırılmıştır.
-                """)
+                    # 2) Her dev için ortalama kümülatif değeri hesapla
+                    avg_df = df_group.groupby("dev")["cum_value"].mean().reset_index().rename(columns={"cum_value": "avg_cum"})
+                    df_group = df_group.merge(avg_df, on="dev")
+                
+                    # 3) Deviation hesaplanıyor: kümülatif değerden ortalamayı çıkar
+                    df_group["deviation"] = df_group["cum_value"] - df_group["avg_cum"]
+                
+                    # 4) Son devdeki ortalama ultimate değeri
+                    last_dev = df_group["dev"].max()
+                    final_avg_ultimate = df_group.loc[df_group["dev"] == last_dev, "avg_cum"].unique()[0]
+                
+                    # 5) Mutlak değer hesapla: final ortalama + deviation
+                    df_group["absolute_value"] = final_avg_ultimate + df_group["deviation"]
+                
+                    # Grafik oluşturma
+                    fig = go.Figure()
+                    for it in sorted(df_group["iteration"].unique()):
+                        sub = df_group[df_group["iteration"] == it]
+                        fig.add_trace(
+                            go.Scatter(
+                                x=sub["dev"],
+                                y=sub["absolute_value"],
+                                mode="lines",
+                                name=f"Iter {it}"
+                            )
+                        )
+                
+                    # 6) Grafik düzenlemeleri
+                    fig.update_layout(
+                        title="Mutlak Ultimate Değer (Sadece ABS)",
+                        xaxis=dict(title="Development Period"),
+                        yaxis=dict(title="Absolute Ultimate"),
+                        showlegend=False,  # Lejandı tamamen kapatıyoruz
+                        hovermode="x unified"
+                    )
+                    fig.update_layout(
+                        yaxis=dict(
+                            side="right",       # Eksen sağda
+                            anchor="free",      # Serbest konum
+                            overlaying="free",  # Başka eksene bindirme yok
+                            position=1.0        # X ekseni üzerinde 1.0 konumunda (sağ kenar)
+                        )
+                    )
+                    fig.update_layout(
+                        hovermode="closest"
+                    )
+                
+                    # Eğer bir yatay çizgi veya annotation eklemek istemiyorsanız, eklemeyin.
+                    # (Sapma=0 çizgisi gibi unsurlar devre dışı bırakıldı.)
+                
+                    st.plotly_chart(fig, use_container_width=True)
+                    
+                    st.write("""
+                        Her çizgi, ilgili iterasyonun development period boyunca **mutlak ultimate** 
+                        (final ortalama + sapma) değerlerini göstermektedir. Lejand ve sapma çizgileri kaldırılmıştır.
+                    """)
+
             with tab5:
                 st.subheader("Ultimate Loss per Scenario (Histogram)")
                 totals_series = totals_data.iloc[:, 0].dropna()
